@@ -19,6 +19,8 @@ FlangerDKAudioProcessor::FlangerDKAudioProcessor() : delayBuffer(2, 1)
     inGain = 0.0;
     outGain = 0.0;
 
+    
+
     delayBufferLength = 1;
 
     delayReadPosition = 0;
@@ -42,58 +44,58 @@ int FlangerDKAudioProcessor::getNumParameters() {
 
 float FlangerDKAudioProcessor::getParameter(int index) {
     switch (index) {
-        case kDelayTime:
-            return delayTime;
-        case kDryWet:
-            return dryWet;
-        case kFeedback:
-            return feedback;
-        case kInGain:
-            return inGain;
-        case kOutGain:
-            return outGain;
-        default:
-            return 0.0;
+    case kDelayTime:
+        return delayTime;
+    case kDryWet:
+        return dryWet;
+    case kFeedback:
+        return feedback;
+    case kInGain:
+        return inGain;
+    case kOutGain:
+        return outGain;
+    default:
+        return 0.0;
     }
 }
 
 void FlangerDKAudioProcessor::setParameter(int index, float newValue) {
     switch (index) {
-        case kDelayTime:
-            delayTime = newValue;
-            delayReadPosition = (int)(delayWritePosition - (delayTime * getSampleRate())  + delayBufferLength) % delayBufferLength;
-            break;
-        case kDryWet:
-            dryWet = newValue;
-            break;
-        case kFeedback:
-            feedback = newValue;
-            break;
-        case kInGain:
-            inGain = newValue;
-            break;
-        case kOutGain:
-            outGain = newValue;
-            break;
-        default:
-            break;
+    case kDelayTime:
+        delayTime = newValue;
+        delayReadPosition = (int)(delayWritePosition - (delayTime * getSampleRate()) + delayBufferLength) % delayBufferLength;
+        break;
+    case kDryWet:
+        dryWet = newValue;
+        break;
+    case kFeedback:
+        feedback = newValue;
+        break;
+    case kInGain:
+        inGain = newValue;
+        break;
+    case kOutGain:
+        outGain = newValue;
+        break;
+    default:
+        break;
     }
 }
 
 const juce::String FlangerDKAudioProcessor::getParameterName(int index) {
     switch (index) {
-        case kDelayTime:
-            return "delay";
-        case kDryWet:
-            return "dry/wet";
-        case kFeedback:
-            return "feedback";
-        case kInGain:
-            return "input gain";
-        case kOutGain:
-            return "output gain";
-        default:
-            return "";
+    case kDelayTime:
+        return "delay";
+    case kDryWet:
+        return "dry/wet";
+    case kFeedback:
+        return "feedback";
+    case kInGain:
+        return "input gain";
+    case kOutGain:
+        return "output gain";
+    default:
+        return "";
     }
 }
 
@@ -123,29 +125,29 @@ bool FlangerDKAudioProcessor::isOutputChannelStereoPair(int index) const {
 
 bool FlangerDKAudioProcessor::acceptsMidi() const
 {
-   #if JucePlugin_WantsMidiInput
+#if JucePlugin_WantsMidiInput
     return true;
-   #else
+#else
     return false;
-   #endif
+#endif
 }
 
 bool FlangerDKAudioProcessor::producesMidi() const
 {
-   #if JucePlugin_ProducesMidiOutput
+#if JucePlugin_ProducesMidiOutput
     return true;
-   #else
+#else
     return false;
-   #endif
+#endif
 }
 
 bool FlangerDKAudioProcessor::isMidiEffect() const
 {
-   #if JucePlugin_IsMidiEffect
+#if JucePlugin_IsMidiEffect
     return true;
-   #else
+#else
     return false;
-   #endif
+#endif
 }
 
 bool FlangerDKAudioProcessor::silenceInProducesSilenceOut() const {
@@ -176,21 +178,21 @@ int FlangerDKAudioProcessor::getCurrentProgram()
     return 0;
 }
 
-void FlangerDKAudioProcessor::setCurrentProgram (int index)
+void FlangerDKAudioProcessor::setCurrentProgram(int index)
 {
 }
 
-const juce::String FlangerDKAudioProcessor::getProgramName (int index)
+const juce::String FlangerDKAudioProcessor::getProgramName(int index)
 {
     return juce::String();
 }
 
-void FlangerDKAudioProcessor::changeProgramName (int index, const juce::String& newName)
+void FlangerDKAudioProcessor::changeProgramName(int index, const juce::String& newName)
 {
 }
 
 //==============================================================================
-void FlangerDKAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void FlangerDKAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
@@ -202,6 +204,10 @@ void FlangerDKAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBl
     delayBuffer.clear();
 
     delayReadPosition = (int)(delayWritePosition - (delayTime * getSampleRate()) + delayBufferLength) % delayBufferLength;
+
+    for (int i = 0; i < getTotalNumInputChannels(); i++) {
+        delayLine[i].prepareToPlay(sampleRate);
+    }
 
 
 }
@@ -238,65 +244,67 @@ bool FlangerDKAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts)
 }
 #endif
 
-void FlangerDKAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void FlangerDKAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     //fix the delay thing with the dsprelated techniqur
     juce::ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels  = getTotalNumInputChannels();
+    auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
     const int numSamples = buffer.getNumSamples();
 
     int dpr, dpw;
-    
+
 
     // This is the place where you'd normally do the guts of your plugin's
     // audio processing...
-    
+
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
-        auto* channelData = buffer.getWritePointer (channel);        
-        auto* delayData = delayBuffer.getWritePointer(juce::jmin(channel, delayBuffer.getNumChannels() - 1));
+        auto* channelData = buffer.getWritePointer(channel);
+        //auto* delayData = delayBuffer.getWritePointer(juce::jmin(channel, delayBuffer.getNumChannels() - 1));
 
-        dpr = delayReadPosition;
-        dpw = delayWritePosition;
-        
+        //dpr = delayReadPosition;
+        //dpw = delayWritePosition;
+        delayLine[channel].setDprDpw(delayReadPosition, delayWritePosition);
+
         for (int i = 0; i < numSamples; ++i) {
-            
+
             const float dry = channelData[i];
             const float in = applyGain(dry, inGain);
-            
+
             float wetSignal = 0.0;
             float out = 0.0;
-            
-            float noiseSample = noise.nextFloat() * 0.001f - 0.0005f; //noise generator between 0 and 1.0
+
+            //float noiseSample = noise.nextFloat() * 0.001f - 0.0005f; //noise generator between 0 and 1.0
             //noiseSample = juce::jmap(noiseSample, (float)0.0, (float)1.0, (float)-0.1, (float)0.1);
             //noiseSample = applyGain(noiseSample, -36.0);
 
-
+            /*
             long rpi = (long)floor(delayData[dpr]); //linear interpolation
-            wetSignal = delayData[dpr] - (double)rpi;//dither here ? //noise here does not fix the distortion problem, also feedback makes it blowup
-            
+            wetSignal = delayData[dpr] - (double)rpi; //transfer to class delayDK
+            */
+            wetSignal = delayLine[channel].delayProcess(in, feedback);
+
             double dryOut = dry * (1.0 - dryWet);
-            double wetOut =  wetSignal * dryWet;
-            
-            out = applyGain((dryOut + wetOut), outGain); //maybe add noise outside the applyGain?
-            //out = applyGain(noiseSample, outGain); //just noise 
+            double wetOut = wetSignal * dryWet;
 
-            delayData[dpw] = in + (wetSignal * feedback); //noise here gets boosted to 0dB
+            out = applyGain((dryOut + wetOut), outGain); 
 
-            if (++dpr >= delayBufferLength)
+            //delayData[dpw] = in + (wetSignal * feedback); //this should go in delayDK as well
+            /*
+            if (++dpr >= delayBufferLength) //maybe these but possibly not try without first
                 dpr = 0;
             if (++dpw >= delayBufferLength)
                 dpw = 0;
-
+            */
             channelData[i] = out;
         }
-        
+
     }
-    
+
     delayReadPosition = dpr;
     delayWritePosition = dpw;
-    
+
     // In case we have more outputs than inputs, this code clears any output
     // channels that didn't contain input data, (because these aren't
     // guaranteed to be empty - they may contain garbage).
@@ -315,18 +323,18 @@ bool FlangerDKAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* FlangerDKAudioProcessor::createEditor()
 {
-    return new FlangerDKAudioProcessorEditor (*this);
+    return new FlangerDKAudioProcessorEditor(*this);
 }
 
 //==============================================================================
-void FlangerDKAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
+void FlangerDKAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     // You should use this method to store your parameters in the memory block.
     // You could do that either as raw data, or use the XML or ValueTree classes
     // as intermediaries to make it easy to save and load complex data.
 }
 
-void FlangerDKAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+void FlangerDKAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
