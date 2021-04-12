@@ -11,12 +11,21 @@
 
 //==============================================================================
 ChorusDKAudioProcessor::ChorusDKAudioProcessor()
-
+#ifndef JucePlugin_PreferredChannelConfigurations
+    : AudioProcessor(BusesProperties()
+#if ! JucePlugin_IsMidiEffect
+#if ! JucePlugin_IsSynth
+        .withInput("Input", juce::AudioChannelSet::stereo(), true)
+#endif
+        .withOutput("Output", juce::AudioChannelSet::stereo(), true)
+#endif
+    ), tree(*this, nullptr, "Parameters", createParameters()), lowpass1(juce::dsp::IIR::Coefficients<float>::makeLowPass(44100, 20000.0f, 0.1))
+#endif
 {
     //default values
     cutoff = 18000;
     q = 0.7;
-    //biquadDK::biquadDK();
+    lastSampleRate = 44100.0;
     
 
 }
@@ -31,57 +40,6 @@ const juce::String ChorusDKAudioProcessor::getName() const
     return JucePlugin_Name;
 }
 
-int ChorusDKAudioProcessor::getNumParameters()
-{
-    return kNumParams;
-}
-
-float ChorusDKAudioProcessor::getParameter(int index)
-{
-    switch (index) {
-    case kCutoff:
-        return biquad[0].getCutoff();
-    case kQ:
-        return biquad[0].getQ();
-    default:
-        return 0.0f;
-    }
-}
-
-void ChorusDKAudioProcessor::setParameter(int index, float newValue)
-{
-    switch (index) {
-    case kCutoff:
-        for (int i = 0; i < kChannels; i++) {
-            biquad[i].setCutoff(newValue);
-        }
-        break;
-    case kQ:
-        for (int i = 0; i < kChannels; i++) {
-            biquad[i].setQ(newValue);
-        }
-        break;
-
-    }
-}
-
-const juce::String ChorusDKAudioProcessor::getParameterName(int index)
-{
-    switch (index) {
-    case kCutoff:
-        return "cutoff";
-    case kQ:
-        return "Q";
-    default:
-        return "";
-    }
-    
-}
-
-const juce::String ChorusDKAudioProcessor::getParameterText(int index)
-{
-    return juce::String();
-}
 
 bool ChorusDKAudioProcessor::acceptsMidi() const
 {
@@ -144,12 +102,18 @@ void ChorusDKAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
-    for (int i = 0; i < kChannels; i++) {
-        biquad[i].setSampleRate(sampleRate);
-        biquad[i].setCutoff(18000); //initial cutoff
-        biquad[i].setQ(0.7);
-        biquad[i].prepareToPlay();
-    }
+    
+    lastSampleRate = sampleRate;
+
+    juce::dsp::ProcessSpec spec;
+    spec.sampleRate = sampleRate;
+    spec.maximumBlockSize = samplesPerBlock;
+    spec.numChannels = getTotalNumOutputChannels();
+
+    lowpass1.prepare(spec);
+    lowpass1.reset();
+
+
 }
 
 void ChorusDKAudioProcessor::releaseResources()
@@ -192,11 +156,7 @@ void ChorusDKAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     const int numSamples = buffer.getNumSamples();
 
     // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
+    // channels that didn't contain input data, (because these aren't guaranteed to be empty - they may contain garbage).
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
@@ -206,22 +166,12 @@ void ChorusDKAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     // the samples and the outer loop is handling the channels.
     // Alternatively, you can process the samples with the channels
     // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        //input data
-        auto* inputData = buffer.getReadPointer (channel);
+    
 
-        //output data
-        auto* outputData = buffer.getWritePointer(channel);
+    juce::dsp::AudioBlock <float> block(buffer);
+    updateFilter();
+    lowpass1.process(juce::dsp::ProcessContextReplacing<float>(block));
 
-        for (int sample = 0; sample < numSamples; sample++) {
-            float inputSample = inputData[sample];
-
-            outputData[sample] = biquad[channel].lowpass(inputSample);
-        }
-
-        // ..do something to the data...
-    }
 }
 
 //==============================================================================
@@ -247,6 +197,24 @@ void ChorusDKAudioProcessor::setStateInformation (const void* data, int sizeInBy
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
+}
+
+void ChorusDKAudioProcessor::updateFilter()
+{
+    float freq = *tree.getRawParameterValue("kCutoff");
+    float q = *tree.getRawParameterValue("kQ");
+
+    *lowpass1.state = *juce::dsp::IIR::Coefficients<float>::makeLowPass(lastSampleRate, freq, q);
+}
+
+juce::AudioProcessorValueTreeState::ParameterLayout ChorusDKAudioProcessor::createParameters()
+{
+    std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>("kCutoff", "Cutoff", 20.0, 20000.0, 18000.0));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>("kQ", "Q", 0.01, 2.0, 0.7));
+    
+    return { params.begin(), params.end() };
 }
 
 //==============================================================================

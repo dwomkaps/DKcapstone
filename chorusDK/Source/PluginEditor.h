@@ -33,6 +33,9 @@ private:
     juce::Label cutoffLabel, qLabel;
     juce::Slider cutoffSlider, qSlider;
 
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> cutoffAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> qAttachment;
+
     ChorusDKAudioProcessor* getProcessor() const {
         return static_cast <ChorusDKAudioProcessor*> (getAudioProcessor());
     }

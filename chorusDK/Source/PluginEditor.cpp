@@ -18,16 +18,16 @@ ChorusDKAudioProcessorEditor::ChorusDKAudioProcessorEditor (ChorusDKAudioProcess
     setSize (400, 300);
 
     cutoffSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    cutoffSlider.addListener(this);
-    cutoffSlider.setRange(20.0, 20000.0, 0.01);
+    cutoffSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, true, 50, 30);
     addAndMakeVisible(&cutoffSlider);
 
+    cutoffAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.tree, "kCutoff", cutoffSlider);
+
     qSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    qSlider.addListener(this);
-    qSlider.setRange(0.01, 2.0, 0.01);
+    qSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, true, 50, 30);
     addAndMakeVisible(&qSlider);
 
-
+    qAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.tree, "kQ", qSlider);
 }
 
 ChorusDKAudioProcessorEditor::~ChorusDKAudioProcessorEditor()
@@ -49,8 +49,8 @@ void ChorusDKAudioProcessorEditor::resized()
 {
     // This is generally where you'll want to lay out the positions of any
     // subcomponents in your editor..
-    cutoffSlider.setBounds(20, 20, 140, 70);
-    qSlider.setBounds(200, 20, 140, 70);
+    cutoffSlider.setBounds(20, 100, 140, 70);
+    qSlider.setBounds(200, 100, 140, 70);
 
 
 }

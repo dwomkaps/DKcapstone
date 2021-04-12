@@ -38,12 +38,7 @@ public:
     //==============================================================================
     const juce::String getName() const override;
 
-    int getNumParameters() override;
-    float getParameter(int index) override;
-    void setParameter(int index, float newValue) override;
-
-    const juce::String getParameterName(int index) override;
-    const juce::String getParameterText(int index) override;
+    
 
     bool acceptsMidi() const override;
     bool producesMidi() const override;
@@ -61,6 +56,8 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    void updateFilter();
+
     enum Params {
         kCutoff = 0,
         kQ,
@@ -70,11 +67,14 @@ public:
     double cutoff;
     double q;
 
+    juce::AudioProcessorValueTreeState tree;
 
 private:
-    static const int kChannels = 2;
-    biquadDK biquad[kChannels];
     
+    juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>, juce::dsp::IIR::Coefficients<float>> lowpass1;
+    float lastSampleRate;
+    
+    juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ChorusDKAudioProcessor)
 };
