@@ -28,6 +28,13 @@ ChorusDKAudioProcessorEditor::ChorusDKAudioProcessorEditor (ChorusDKAudioProcess
     addAndMakeVisible(&qSlider);
 
     qAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.tree, "kQ", qSlider);
+
+    cutoffLabel.attachToComponent(&cutoffSlider, false);
+    cutoffLabel.setFont(juce::Font(11.0));
+
+    qLabel.attachToComponent(&qSlider, false);
+    qLabel.setFont(juce::Font(11.0));
+
 }
 
 ChorusDKAudioProcessorEditor::~ChorusDKAudioProcessorEditor()
