@@ -209,12 +209,12 @@ void ChorusDKAudioProcessor::updateFilter()
 
 juce::AudioProcessorValueTreeState::ParameterLayout ChorusDKAudioProcessor::createParameters()
 {
-    std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
+    juce::AudioProcessorValueTreeState::ParameterLayout params;
 
-    params.push_back(std::make_unique<juce::AudioParameterFloat>("kCutoff", "Cutoff", 20.0, 20000.0, 18000.0));
-    params.push_back(std::make_unique<juce::AudioParameterFloat>("kQ", "Q", 0.01, 2.0, 0.7));
+    params.add(std::make_unique<juce::AudioParameterFloat>("kCutoff", "Cutoff", 20.0, 20000.0, 18000.0));
+    params.add(std::make_unique<juce::AudioParameterFloat>("kQ", "Q", 0.01, 2.0, 0.7));
     
-    return { params.begin(), params.end() };
+    return params;
 }
 
 //==============================================================================
