@@ -57,7 +57,9 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     void updateFilter();
-
+    void updateChorus();
+    void updateMix();
+    /*
     enum Params {
         kCutoff = 0,
         kQ,
@@ -66,14 +68,17 @@ public:
 
     double cutoff;
     double q;
-
+    */
     juce::AudioProcessorValueTreeState tree;
 
 private:
     
     juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>, juce::dsp::IIR::Coefficients<float>> lowpass1;
     float lastSampleRate;
-    
+    //actual chorus time
+    juce::dsp::Chorus<float> chorus;
+    juce::dsp::DryWetMixer<float> mixer;
+
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ChorusDKAudioProcessor)

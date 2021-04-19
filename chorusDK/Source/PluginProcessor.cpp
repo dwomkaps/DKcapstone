@@ -23,8 +23,8 @@ ChorusDKAudioProcessor::ChorusDKAudioProcessor()
 #endif
 {
     //default values
-    cutoff = 18000;
-    q = 0.7;
+    //cutoff = 18000;
+    //q = 0.7;
     lastSampleRate = 44100.0;
     
 
@@ -111,8 +111,13 @@ void ChorusDKAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
     spec.numChannels = getTotalNumOutputChannels();
 
     lowpass1.prepare(spec);
-    lowpass1.reset();
+    chorus.prepare(spec);
+    //mixer.prepare(spec);
 
+
+    lowpass1.reset();
+    chorus.reset();
+    
 
 }
 
@@ -167,10 +172,20 @@ void ChorusDKAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     // Alternatively, you can process the samples with the channels
     // interleaved by keeping the same state.
     
-
+    //updateMix();
     juce::dsp::AudioBlock <float> block(buffer);
+    const auto& inputBlock = juce::dsp::ProcessContextReplacing<float>(block).getInputBlock();
+    auto& outputBlock = juce::dsp::ProcessContextReplacing<float>(block).getOutputBlock();
+    //mixer.pushDrySamples(inputBlock);
+
     updateFilter();
     lowpass1.process(juce::dsp::ProcessContextReplacing<float>(block));
+
+    //mixer.mixWetSamples(outputBlock);
+
+    updateChorus();
+    chorus.process(juce::dsp::ProcessContextReplacing<float>(block));
+
 
 }
 
@@ -182,7 +197,7 @@ bool ChorusDKAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* ChorusDKAudioProcessor::createEditor()
 {
-    return new ChorusDKAudioProcessorEditor (*this);
+    return new ChorusDKAudioProcessorEditor(*this);
 }
 
 //==============================================================================
@@ -207,6 +222,28 @@ void ChorusDKAudioProcessor::updateFilter()
     *lowpass1.state = *juce::dsp::IIR::Coefficients<float>::makeLowPass(lastSampleRate, freq, q);
 }
 
+void ChorusDKAudioProcessor::updateChorus()
+{
+    float rate = *tree.getRawParameterValue("kRate");
+    float depth = *tree.getRawParameterValue("kDepth");
+    float delay = *tree.getRawParameterValue("kDelay");
+    float feedback = *tree.getRawParameterValue("kFeedback");
+    float dryWet = *tree.getRawParameterValue("kDryWet");
+
+    chorus.setRate(rate);
+    chorus.setDepth(depth);
+    chorus.setCentreDelay(delay);
+    chorus.setFeedback(feedback);
+    chorus.setMix(dryWet);
+}
+
+void ChorusDKAudioProcessor::updateMix()
+{
+    float dryWet = *tree.getRawParameterValue("kDryWet"); //not yet
+
+    mixer.setWetMixProportion(dryWet);
+}
+
 juce::AudioProcessorValueTreeState::ParameterLayout ChorusDKAudioProcessor::createParameters()
 {
     juce::AudioProcessorValueTreeState::ParameterLayout params;
@@ -214,6 +251,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout ChorusDKAudioProcessor::crea
     params.add(std::make_unique<juce::AudioParameterFloat>("kCutoff", "Cutoff", 20.0, 20000.0, 18000.0));
     params.add(std::make_unique<juce::AudioParameterFloat>("kQ", "Q", 0.01, 2.0, 0.7));
     
+    params.add(std::make_unique<juce::AudioParameterFloat>("kRate", "Rate", 0.1, 20.0, 0.5));
+    params.add(std::make_unique<juce::AudioParameterFloat>("kDepth", "Depth", 0.01, 1.0, 0.5));
+    params.add(std::make_unique<juce::AudioParameterInt>("kDelay", "Delay", 20, 50, 20));
+    params.add(std::make_unique<juce::AudioParameterFloat>("kFeedback", "Feedback", 0.0, 0.99, 0.0));
+    params.add(std::make_unique<juce::AudioParameterFloat>("kDryWet", "Dry/Wet", 0.0, 1.0, 0.5));
+
+
     return params;
 }
 
