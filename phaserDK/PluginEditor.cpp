@@ -11,7 +11,7 @@
 
 //==============================================================================
 PhaserDKAudioProcessorEditor::PhaserDKAudioProcessorEditor (PhaserDKAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p), centerFreqLabel("", "center freq"), polesLabel("", "poles"), 
+    : AudioProcessorEditor (&p), audioProcessor (p), centerFreqLabel("", "center freq"), 
     feedbackLabel("", "feedback"), LFOrateLabel("", "LFO rate (Hz)"), LFOdepthLabel("", "LFO depth"), dryWetLabel("", "dry/wet")
 {
     // Make sure that before the constructor has finished, you've set the
@@ -20,13 +20,10 @@ PhaserDKAudioProcessorEditor::PhaserDKAudioProcessorEditor (PhaserDKAudioProcess
 
     centerFreqSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     centerFreqSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, true, 50, 30);
+    centerFreqSlider.setSkewFactor(0.199);
     addAndMakeVisible(&centerFreqSlider);
     centerFreqAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.tree, "kCenterFreq", centerFreqSlider);
-
-    polesSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    polesSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, true, 50, 30);
-    addAndMakeVisible(&polesSlider);
-    polesAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.tree, "kPoles", polesSlider);
+    
 
     feedbackSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     feedbackSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, true, 50, 30);
@@ -50,9 +47,6 @@ PhaserDKAudioProcessorEditor::PhaserDKAudioProcessorEditor (PhaserDKAudioProcess
 
     centerFreqLabel.attachToComponent(&centerFreqSlider, false);
     centerFreqLabel.setFont(juce::Font(11.0));
-
-    polesLabel.attachToComponent(&polesSlider, false);
-    polesLabel.setFont(juce::Font(11.0));
 
     feedbackLabel.attachToComponent(&feedbackSlider, false);
     feedbackLabel.setFont(juce::Font(11.0));
@@ -88,10 +82,9 @@ void PhaserDKAudioProcessorEditor::resized()
     // This is generally where you'll want to lay out the positions of any
     // subcomponents in your editor..
     centerFreqSlider.setBounds(20, 20, 140, 70);
-    polesSlider.setBounds(130, 20, 140, 70);
     feedbackSlider.setBounds(240, 20, 140, 70);
     LFOrateSlider.setBounds(20, 200, 140, 70);
-    LFOdepthLabel.setBounds(130, 200, 140, 70);
+    LFOdepthSlider.setBounds(130, 200, 140, 70);
     dryWetSlider.setBounds(240, 200, 140, 70);
 
 }

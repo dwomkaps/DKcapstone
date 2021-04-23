@@ -12,22 +12,16 @@
 //==============================================================================
 PhaserDKAudioProcessor::PhaserDKAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
-     : AudioProcessor (BusesProperties()
-                     #if ! JucePlugin_IsMidiEffect
-                      #if ! JucePlugin_IsSynth
-                       .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
-                      #endif
-                       .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
-                     #endif
-                       ), tree(*this, nullptr, "Parameters", createParameters())
-                        , allpass1(juce::dsp::IIR::Coefficients<float>::makeAllPass(44100.0, 5000.0))
-                        , allpass2(juce::dsp::IIR::Coefficients<float>::makeAllPass(44100.0, 5000.0))
-                        , allpass3(juce::dsp::IIR::Coefficients<float>::makeAllPass(44100.0, 5000.0))
-                        , allpass4(juce::dsp::IIR::Coefficients<float>::makeAllPass(44100.0, 5000.0))
-                        , allpass5(juce::dsp::IIR::Coefficients<float>::makeAllPass(44100.0, 5000.0))
-                        , allpass6(juce::dsp::IIR::Coefficients<float>::makeAllPass(44100.0, 5000.0))
-                        , allpass7(juce::dsp::IIR::Coefficients<float>::makeAllPass(44100.0, 5000.0))
-                        , allpass8(juce::dsp::IIR::Coefficients<float>::makeAllPass(44100.0, 5000.0))
+    : AudioProcessor(BusesProperties()
+#if ! JucePlugin_IsMidiEffect
+#if ! JucePlugin_IsSynth
+        .withInput("Input", juce::AudioChannelSet::stereo(), true)
+#endif
+        .withOutput("Output", juce::AudioChannelSet::stereo(), true)
+#endif
+    ), tree(*this, nullptr, "Parameters", createParameters())
+    
+    
 #endif
 {
     lastSampleRate = 44100;
@@ -111,24 +105,12 @@ void PhaserDKAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
     spec.maximumBlockSize = samplesPerBlock;
     spec.numChannels = getTotalNumOutputChannels();
 
-    allpass1.prepare(spec);
-    allpass2.prepare(spec);
-    allpass3.prepare(spec);
-    allpass4.prepare(spec);
-    allpass5.prepare(spec);
-    allpass6.prepare(spec);
-    allpass7.prepare(spec);
-    allpass8.prepare(spec);
+    phaser.prepare(spec);
+    mixer.prepare(spec);
 
-    allpass1.reset();
-    allpass2.reset();
-    allpass3.reset();
-    allpass4.reset();
-    allpass5.reset();
-    allpass6.reset();
-    allpass7.reset();
-    allpass8.reset();
+    phaser.reset();
 
+    
 
 }
 
@@ -183,24 +165,23 @@ void PhaserDKAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     // Alternatively, you can process the samples with the channels
     // interleaved by keeping the same state.
     juce::dsp::AudioBlock <float> block(buffer);
-    updateFilter();
-    int numPoles = getPoles();
+    
+    
+    
 
-    allpass1.process(juce::dsp::ProcessContextReplacing<float>(block));
-    allpass2.process(juce::dsp::ProcessContextReplacing<float>(block));
+    
+    
+    auto context = juce::dsp::ProcessContextReplacing<float> (block);
+    //auto mixerContext = juce::dsp::ProcessContextReplacing<float>(block);
+    //const auto& input = mixerContext.getInputBlock();
+    //const auto& output = mixerContext.getOutputBlock(); //find some way to get the allpass processes to route into output or something
+    //so that way we can add it to mixer and have a dry/wet that works
 
-    if (numPoles > 1) {
-        allpass3.process(juce::dsp::ProcessContextReplacing<float>(block));
-        allpass4.process(juce::dsp::ProcessContextReplacing<float>(block));
-    }
-    if (numPoles > 2) {
-        allpass5.process(juce::dsp::ProcessContextReplacing<float>(block));
-        allpass6.process(juce::dsp::ProcessContextReplacing<float>(block));
-    }
-    if (numPoles > 3) {
-        allpass7.process(juce::dsp::ProcessContextReplacing<float>(block));
-        allpass8.process(juce::dsp::ProcessContextReplacing<float>(block));
-    }
+    //mixer.pushDrySamples(input);
+    updatePhaser();
+    phaser.process(context);
+
+    //mixer.mixWetSamples(context.getOutputBlock());
 
 }
 
@@ -229,34 +210,43 @@ void PhaserDKAudioProcessor::setStateInformation (const void* data, int sizeInBy
     // whose contents will have been created by the getStateInformation() call.
 }
 
-void PhaserDKAudioProcessor::updateFilter()
+
+
+void PhaserDKAudioProcessor::updateMixer()
 {
+    float mix = *tree.getRawParameterValue("kDryWet");
+
+    mixer.setWetMixProportion(mix);
+}
+
+void PhaserDKAudioProcessor::updatePhaser()
+{
+    float rate = *tree.getRawParameterValue("kLFOrate");
+    float depth = *tree.getRawParameterValue("kLFOdepth");
     float freq = *tree.getRawParameterValue("kCenterFreq");
+    float feedback = *tree.getRawParameterValue("kFeedback");
+    float dryWet = *tree.getRawParameterValue("kDryWet");
 
-    *allpass1.state = *juce::dsp::IIR::Coefficients<float>::makeAllPass(lastSampleRate, freq);
-    *allpass2.state = *juce::dsp::IIR::Coefficients<float>::makeAllPass(lastSampleRate, freq);
-    *allpass3.state = *juce::dsp::IIR::Coefficients<float>::makeAllPass(lastSampleRate, freq);
-    *allpass4.state = *juce::dsp::IIR::Coefficients<float>::makeAllPass(lastSampleRate, freq);
-    *allpass5.state = *juce::dsp::IIR::Coefficients<float>::makeAllPass(lastSampleRate, freq);
-    *allpass6.state = *juce::dsp::IIR::Coefficients<float>::makeAllPass(lastSampleRate, freq);
-    *allpass7.state = *juce::dsp::IIR::Coefficients<float>::makeAllPass(lastSampleRate, freq);
-    *allpass8.state = *juce::dsp::IIR::Coefficients<float>::makeAllPass(lastSampleRate, freq);
+    phaser.setCentreFrequency(freq);
+    phaser.setRate(rate);
+    phaser.setDepth(depth);
+    phaser.setFeedback(feedback);
+    phaser.setMix(dryWet);
+
+
+
 }
 
-int PhaserDKAudioProcessor::getPoles()
-{
-    int poleCounter = *tree.getRawParameterValue("kPoles");
-    
-    return poleCounter;
-}
+
+
+
 
 juce::AudioProcessorValueTreeState::ParameterLayout PhaserDKAudioProcessor::createParameters()
 {
     juce::AudioProcessorValueTreeState::ParameterLayout params;
 
     params.add(std::make_unique<juce::AudioParameterFloat>("kCenterFreq", "Center Freq", 20.0, 20000.0, 5000.0));
-    params.add(std::make_unique<juce::AudioParameterInt>("kPoles", "Poles", 1, 4, 1));
-    params.add(std::make_unique<juce::AudioParameterFloat>("kFeedback", "Feedback", 0.0, 1.0, 0.0));
+    params.add(std::make_unique<juce::AudioParameterFloat>("kFeedback", "Feedback", -1.0, 1.0, 0.0));
     params.add(std::make_unique<juce::AudioParameterFloat>("kLFOrate", "LFO rate", 0.1, 20.0, 5.0));
     params.add(std::make_unique<juce::AudioParameterFloat>("kLFOdepth", "LFO depth", 0.01, 1.0, 0.5));
     params.add(std::make_unique<juce::AudioParameterFloat>("kDryWet", "dry/wet", 0.0, 1.0, 0.5));

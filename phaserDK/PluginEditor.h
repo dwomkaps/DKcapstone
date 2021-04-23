@@ -30,11 +30,10 @@ private:
     // access the processor object that created it.
     PhaserDKAudioProcessor& audioProcessor;
 
-    juce::Label centerFreqLabel, polesLabel, feedbackLabel, LFOrateLabel, LFOdepthLabel, dryWetLabel;
-    juce::Slider centerFreqSlider, polesSlider, feedbackSlider, LFOrateSlider, LFOdepthSlider, dryWetSlider;
+    juce::Label centerFreqLabel, feedbackLabel, LFOrateLabel, LFOdepthLabel, dryWetLabel;
+    juce::Slider centerFreqSlider, feedbackSlider, LFOrateSlider, LFOdepthSlider, dryWetSlider;
 
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> centerFreqAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> polesAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> feedbackAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> LFOrateAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> LFOdepthAttachment;
