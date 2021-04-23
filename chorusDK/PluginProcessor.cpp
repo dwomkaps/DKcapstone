@@ -244,7 +244,7 @@ void ChorusDKAudioProcessor::updateChorus()
 
 void ChorusDKAudioProcessor::updateMix()
 {
-    float dryWet = *tree.getRawParameterValue("kDryWet"); //not yet
+    float dryWet = *tree.getRawParameterValue("kDryWet"); 
 
     mixer.setWetMixProportion(dryWet);
 }
