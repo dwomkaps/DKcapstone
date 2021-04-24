@@ -10,21 +10,21 @@
 #include "PluginEditor.h"
 
 //==============================================================================
-FlangerDKAudioProcessor::FlangerDKAudioProcessor() : delayBuffer(2, 1)
+FlangerDKAudioProcessor::FlangerDKAudioProcessor()
+#ifndef JucePlugin_PreferredChannelConfigurations
+    : AudioProcessor(BusesProperties()
+#if ! JucePlugin_IsMidiEffect
+#if ! JucePlugin_IsSynth
+        .withInput("Input", juce::AudioChannelSet::stereo(), true)
+#endif
+        .withOutput("Output", juce::AudioChannelSet::stereo(), true)
+#endif
+    ), tree(*this, nullptr, "Parameters", createParameters())
+#endif
 {
     //set default values
-    delayTime = 0.5; //s
-    dryWet = 0.5;
-    feedback = 0.0;
-    inGain = 0.0;
-    outGain = 0.0;
-
     
 
-    delayBufferLength = 1;
-
-    delayReadPosition = 0;
-    delayWritePosition = 0;
 
 }
 
@@ -38,70 +38,6 @@ const juce::String FlangerDKAudioProcessor::getName() const
     return JucePlugin_Name;
 }
 
-int FlangerDKAudioProcessor::getNumParameters() {
-    return kNumParams;
-}
-
-float FlangerDKAudioProcessor::getParameter(int index) {
-    switch (index) {
-    case kDelayTime:
-        return delayTime;
-    case kDryWet:
-        return dryWet;
-    case kFeedback:
-        return feedback;
-    case kInGain:
-        return inGain;
-    case kOutGain:
-        return outGain;
-    default:
-        return 0.0;
-    }
-}
-
-void FlangerDKAudioProcessor::setParameter(int index, float newValue) {
-    switch (index) {
-    case kDelayTime:
-        delayTime = newValue;
-        delayReadPosition = (int)(delayWritePosition - (delayTime * getSampleRate()) + delayBufferLength) % delayBufferLength;
-        break;
-    case kDryWet:
-        dryWet = newValue;
-        break;
-    case kFeedback:
-        feedback = newValue;
-        break;
-    case kInGain:
-        inGain = newValue;
-        break;
-    case kOutGain:
-        outGain = newValue;
-        break;
-    default:
-        break;
-    }
-}
-
-const juce::String FlangerDKAudioProcessor::getParameterName(int index) {
-    switch (index) {
-    case kDelayTime:
-        return "delay";
-    case kDryWet:
-        return "dry/wet";
-    case kFeedback:
-        return "feedback";
-    case kInGain:
-        return "input gain";
-    case kOutGain:
-        return "output gain";
-    default:
-        return "";
-    }
-}
-
-const juce::String FlangerDKAudioProcessor::getParameterText(int index) {
-    return juce::String();
-}
 
 const juce::String FlangerDKAudioProcessor::getInputChannelName(int channelIndex) const {
     return juce::String(channelIndex + 1);
@@ -196,18 +132,15 @@ void FlangerDKAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlo
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
-    delayBufferLength = ((int)2.0 * sampleRate);
-    if (delayBufferLength < 1)
-        delayBufferLength = 1;
+    
+    juce::dsp::ProcessSpec spec;
+    spec.sampleRate = sampleRate;
+    spec.maximumBlockSize = samplesPerBlock;
+    spec.numChannels = getTotalNumOutputChannels();
 
-    delayBuffer.setSize(2, delayBufferLength);
-    delayBuffer.clear();
+    flanger1.prepare(spec);
 
-    delayReadPosition = (int)(delayWritePosition - (delayTime * getSampleRate()) + delayBufferLength) % delayBufferLength;
-
-    for (int i = 0; i < getTotalNumInputChannels(); i++) {
-        delayLine[i].prepareToPlay(sampleRate);
-    }
+    flanger1.reset();
 
 
 }
@@ -246,73 +179,30 @@ bool FlangerDKAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts)
 
 void FlangerDKAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
-    //fix the delay thing with the dsprelated techniqur
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
-    const int numSamples = buffer.getNumSamples();
-
-    int dpr, dpw;
+    
+    // In case we have more outputs than inputs, this code clears any output
+    // channels that didn't contain input data, (because these aren't
+    // guaranteed to be empty - they may contain garbage). 
+    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
+        buffer.clear(i, 0, buffer.getNumSamples());
 
 
     // This is the place where you'd normally do the guts of your plugin's
     // audio processing...
 
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer(channel);
-        //auto* delayData = delayBuffer.getWritePointer(juce::jmin(channel, delayBuffer.getNumChannels() - 1));
+    
+    juce::dsp::AudioBlock <float> block(buffer);
+    auto context = juce::dsp::ProcessContextReplacing<float>(block);
 
-        //dpr = delayReadPosition;
-        //dpw = delayWritePosition;
-        delayLine[channel].setDprDpw(delayReadPosition, delayWritePosition);
+    updateFlanger();
 
-        for (int i = 0; i < numSamples; ++i) {
+    flanger1.process(context);
 
-            const float dry = channelData[i];
-            const float in = applyGain(dry, inGain);
 
-            float wetSignal = 0.0;
-            float out = 0.0;
 
-            //float noiseSample = noise.nextFloat() * 0.001f - 0.0005f; //noise generator between 0 and 1.0
-            //noiseSample = juce::jmap(noiseSample, (float)0.0, (float)1.0, (float)-0.1, (float)0.1);
-            //noiseSample = applyGain(noiseSample, -36.0);
-
-            /*
-            long rpi = (long)floor(delayData[dpr]); //linear interpolation
-            wetSignal = delayData[dpr] - (double)rpi; //transfer to class delayDK
-            */
-            wetSignal = delayLine[channel].delayProcess(in, feedback);
-
-            double dryOut = dry * (1.0 - dryWet);
-            double wetOut = wetSignal * dryWet;
-
-            out = applyGain((dryOut + wetOut), outGain); 
-
-            //delayData[dpw] = in + (wetSignal * feedback); //this should go in delayDK as well
-            /*
-            if (++dpr >= delayBufferLength) //maybe these but possibly not try without first
-                dpr = 0;
-            if (++dpw >= delayBufferLength)
-                dpw = 0;
-            */
-            channelData[i] = out;
-        }
-
-    }
-
-    delayReadPosition = dpr;
-    delayWritePosition = dpw;
-
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear(i, 0, buffer.getNumSamples());
 }
 
 //==============================================================================
@@ -338,6 +228,37 @@ void FlangerDKAudioProcessor::setStateInformation(const void* data, int sizeInBy
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
+}
+
+void FlangerDKAudioProcessor::updateFlanger()
+{
+    float rate = *tree.getRawParameterValue("kRate");
+    float depth = *tree.getRawParameterValue("kDepth");
+    float delay = *tree.getRawParameterValue("kDelay");
+    float feedback = *tree.getRawParameterValue("kFeedback");
+    float dryWet = *tree.getRawParameterValue("kDryWet");
+
+    flanger1.setRate(rate);
+    flanger1.setDepth(depth);
+    flanger1.setCentreDelay(delay);
+    flanger1.setFeedback(feedback);
+    flanger1.setMix(dryWet);
+
+
+}
+
+juce::AudioProcessorValueTreeState::ParameterLayout FlangerDKAudioProcessor::createParameters()
+{
+    juce::AudioProcessorValueTreeState::ParameterLayout params;
+
+    params.add(std::make_unique<juce::AudioParameterFloat>("kRate", "Rate", 0.1, 20.0, 0.5));
+    params.add(std::make_unique<juce::AudioParameterFloat>("kDepth", "Depth", 0.01, 1.0, 0.5));
+    params.add(std::make_unique<juce::AudioParameterInt>("kDelay", "Delay", 1, 20, 3));
+    params.add(std::make_unique<juce::AudioParameterFloat>("kFeedback", "Feedback", 0.0, 0.99, 0.0));
+    params.add(std::make_unique<juce::AudioParameterFloat>("kDryWet", "Dry/Wet", 0.0, 1.0, 0.5));
+
+    
+    return params;
 }
 
 //==============================================================================
