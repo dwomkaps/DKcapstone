@@ -7,7 +7,7 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "delayDK.h"
+
 //==============================================================================
 /**
 */
@@ -35,12 +35,6 @@ public:
     //==============================================================================
     const juce::String getName() const override;
 
-    int getNumParameters() override;
-    float getParameter(int index) override;
-    void setParameter(int index, float newValue) override;
-
-    const juce::String getParameterName(int index) override;
-    const juce::String getParameterText(int index) override;
 
     const juce::String getInputChannelName(int channelIndex) const override;
     const juce::String getOutputChannelName(int channelIndex) const override;
@@ -67,37 +61,18 @@ public:
     void setStateInformation(const void* data, int sizeInBytes) override;
 
 
-
-    enum Params {
-        kDelayTime = 0,
-        kDryWet,
-        kFeedback,
-        kInGain,
-        kOutGain,
-        kNumParams
-    };
-
-    double delayTime;
-    double dryWet;
-    double feedback;
-    double inGain;
-    double outGain;
-
+    void updateFlanger();
+    void updatePan();
+    juce::AudioProcessorValueTreeState tree;
 
 private:
-    // circular buffer variables
-    juce::AudioBuffer<float> delayBuffer;
-    int delayBufferLength;
-    int delayReadPosition;
-    int delayWritePosition;
-
-    juce::Random noise;
-    //juce::dsp::DelayLine<float> delayLine;
+    juce::dsp::Chorus<float> flanger1;
+    juce::dsp::Chorus<float> flanger2;
+    juce::dsp::Panner<float> pan1;
+    juce::dsp::Panner<float> pan2;
+    //implement second flanger and panning please
     
-    static const int kChannels = 2;
-    delayDK delayLine[kChannels];
-    
-
+    juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FlangerDKAudioProcessor)
 };
