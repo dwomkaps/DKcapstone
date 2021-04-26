@@ -13,12 +13,12 @@
 FlangerDKAudioProcessorEditor::FlangerDKAudioProcessorEditor(FlangerDKAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p), delayLabel("", "Delay (ms):"), delay2Label("", "Delay 2 (ms)"),
     dryWetLabel("", "dry/wet:"), feedbackLabel("", "feedback:"), rateLabel("", "LFO rate"),
-    depthLabel("", "LFO depth"), pan1Label("", "Delay 1 Pan"), pan2Label("", "Delay 2 Pan")
+    depthLabel("", "LFO depth")
 
 {
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
-    setSize (600, 300);
+    setSize (400, 300);
 
     delaySlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     delaySlider.setTextBoxStyle(juce::Slider::TextBoxBelow, true, 50, 20);
@@ -62,20 +62,6 @@ FlangerDKAudioProcessorEditor::FlangerDKAudioProcessorEditor(FlangerDKAudioProce
     depthLabel.setFont(juce::Font(11.0));
     depthAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.tree, "kDepth", depthSlider);
 
-    pan1Slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    pan1Slider.setTextBoxStyle(juce::Slider::TextBoxBelow, true, 50, 20);
-    addAndMakeVisible(&pan1Slider);
-    pan1Label.attachToComponent(&pan1Slider, false);
-    pan1Label.setFont(juce::Font(11.0));
-    pan1Attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.tree, "kPan1", pan1Slider);
-
-    pan2Slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    pan2Slider.setTextBoxStyle(juce::Slider::TextBoxBelow, true, 50, 20);
-    addAndMakeVisible(&pan2Slider);
-    pan2Label.attachToComponent(&pan2Slider, false);
-    pan2Label.setFont(juce::Font(11.0));
-    pan2Attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.tree, "kPan2", pan2Slider);
-
 }
 
 FlangerDKAudioProcessorEditor::~FlangerDKAudioProcessorEditor()
@@ -103,11 +89,9 @@ void FlangerDKAudioProcessorEditor::resized()
     
     // sets the position and size of the slider with arguments (x, y, width, height)
     delaySlider.setBounds(20, 20, 150, 70);
-    delay2Slider.setBounds(160, 20, 150, 70);
-    pan1Slider.setBounds(300, 20, 150, 70);
-    pan2Slider.setBounds(440, 20, 150, 70);
-    dryWetSlider.setBounds(400, 180, 150, 70);
+    delay2Slider.setBounds(200, 20, 150, 70);
+    dryWetSlider.setBounds(200, 180, 150, 70);
     feedbackSlider.setBounds(20, 180, 150, 70);
     rateSlider.setBounds(20, 100, 150, 70);
-    depthSlider.setBounds(400, 100, 150, 70);
+    depthSlider.setBounds(200, 100, 150, 70);
 }

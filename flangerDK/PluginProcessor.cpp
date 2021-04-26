@@ -141,13 +141,9 @@ void FlangerDKAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlo
     flanger1.prepare(spec);
     flanger2.prepare(spec);
 
-    pan1.prepare(spec);
-    pan2.prepare(spec);
-
     flanger1.reset();
     flanger2.reset();
-    pan1.reset();
-    pan2.reset();
+
 
 }
 
@@ -198,39 +194,17 @@ void FlangerDKAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juc
 
     // This is the place where you'd normally do the guts of your plugin's
     // audio processing...
-
+    
     
     juce::dsp::AudioBlock <float> block(buffer);
-    juce::dsp::AudioBlock<float> block2(buffer);
-    //auto context = juce::dsp::ProcessContextReplacing<float>(block);
-    //auto context2 = juce::dsp::ProcessContextReplacing<float>(block2);
-
-    const auto& inputBlock = juce::dsp::ProcessContextReplacing<float>(block).getInputBlock();
-    auto& outputBlock = juce::dsp::ProcessContextReplacing<float>(block).getOutputBlock();
-
-    auto context = juce::dsp::ProcessContextNonReplacing<float>(inputBlock, outputBlock);
-    //const auto& inputBlock2 = context2.getInputBlock();
-    //auto& outputBlock2 = context2.getOutputBlock();
-    /*
-    const auto& panInputBlock1 = context.getOutputBlock();
-    auto& panOutputBlock1 = juce::dsp::ProcessContextReplacing<float>(block).getOutputBlock();
-
-    const auto& panInputBlock2 = context.getOutputBlock();
-    auto& panOutputBlock2 = juce::dsp::ProcessContextReplacing<float>(block).getOutputBlock();
+    auto context = juce::dsp::ProcessContextReplacing<float>(block);
     
-    auto panContext1 = juce::dsp::ProcessContextNonReplacing<float>(panInputBlock1, panOutputBlock1);
-    auto panContext2 = juce::dsp::ProcessContextNonReplacing<float>(panInputBlock2, panOutputBlock2);
-    */
+
     updateFlanger();
 
     flanger1.process(context);
     flanger2.process(context);
-    /*
-    updatePan();
-
-    pan1.process(panContext1);
-    pan2.process(panContext2);
-    */
+    
 }
 
 //==============================================================================
@@ -279,15 +253,7 @@ void FlangerDKAudioProcessor::updateFlanger()
     flanger2.setMix(dryWet);
 }
 
-void FlangerDKAudioProcessor::updatePan()
-{
-    float panValue1 = *tree.getRawParameterValue("kPan1");
-    float panValue2 = *tree.getRawParameterValue("kPan2");
 
-    pan1.setPan(panValue1);
-    pan2.setPan(panValue2);
-
-}
 
 juce::AudioProcessorValueTreeState::ParameterLayout FlangerDKAudioProcessor::createParameters()
 {
@@ -296,11 +262,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout FlangerDKAudioProcessor::cre
     params.add(std::make_unique<juce::AudioParameterFloat>("kRate", "Rate", 0.1, 20.0, 0.5));
     params.add(std::make_unique<juce::AudioParameterFloat>("kDepth", "Depth", 0.01, 1.0, 0.5));
     params.add(std::make_unique<juce::AudioParameterInt>("kDelay", "Delay", 1, 20, 3));
-    params.add(std::make_unique<juce::AudioParameterInt>("kDelay2", "Delay", 1, 20, 3));
+    params.add(std::make_unique<juce::AudioParameterInt>("kDelay2", "Delay", 1, 20, 6));
     params.add(std::make_unique<juce::AudioParameterFloat>("kFeedback", "Feedback", 0.0, 0.99, 0.0));
     params.add(std::make_unique<juce::AudioParameterFloat>("kDryWet", "Dry/Wet", 0.0, 1.0, 0.5));
-    params.add(std::make_unique<juce::AudioParameterFloat>("kPan1", "Delay 1 Pan", -1.0, 1.0, 0.0));
-    params.add(std::make_unique<juce::AudioParameterFloat>("kPan2", "Delay 2 Pan", -1.0, 1.0, 0.0));
+
     
     return params;
 }

@@ -62,15 +62,13 @@ public:
 
 
     void updateFlanger();
-    void updatePan();
+
     juce::AudioProcessorValueTreeState tree;
 
 private:
     juce::dsp::Chorus<float> flanger1;
     juce::dsp::Chorus<float> flanger2;
-    juce::dsp::Panner<float> pan1;
-    juce::dsp::Panner<float> pan2;
-    //implement second flanger and panning please
+
     
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
     //==============================================================================

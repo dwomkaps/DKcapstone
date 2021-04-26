@@ -30,8 +30,8 @@ private:
     // access the processor object that created it.
     FlangerDKAudioProcessor& audioProcessor;
 
-    juce::Label delayLabel, delay2Label, dryWetLabel, feedbackLabel, rateLabel, depthLabel, pan1Label, pan2Label;
-    juce::Slider delaySlider, delay2Slider, dryWetSlider, feedbackSlider, rateSlider, depthSlider, pan1Slider, pan2Slider;
+    juce::Label delayLabel, delay2Label, dryWetLabel, feedbackLabel, rateLabel, depthLabel;
+    juce::Slider delaySlider, delay2Slider, dryWetSlider, feedbackSlider, rateSlider, depthSlider;
 
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> rateAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> depthAttachment;
@@ -39,8 +39,6 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> feedbackAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> dryWetAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> delay2Attachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> pan1Attachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> pan2Attachment;
 
     FlangerDKAudioProcessor* getProcessor() const {
         return static_cast <FlangerDKAudioProcessor*>(getAudioProcessor());
